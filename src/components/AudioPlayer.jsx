@@ -34,6 +34,22 @@ export default function AudioPlayer() {
             console.log("Using static demos (Firebase not configured)");
         }
     }, []);
+
+    // Utility to convert various link types (like Google Drive) to direct play links
+    const getPlayableUrl = (url) => {
+        if (!url) return "";
+        // 1. Google Drive Conversion
+        const driveMatch = url.match(/\/file\/d\/([^\/]+)/) || url.match(/id=([^\&]+)/);
+        if (driveMatch && (url.includes("drive.google.com") || url.includes("docs.google.com"))) {
+            return `https://docs.google.com/uc?id=${driveMatch[1]}`;
+        }
+        // 2. DropBox Conversion
+        if (url.includes("dropbox.com") && url.includes("dl=0")) {
+            return url.replace("dl=0", "raw=1");
+        }
+        return url;
+    };
+
     const [isPlaying, setIsPlaying] = useState(false);
     const [duration, setDuration] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
@@ -84,7 +100,7 @@ export default function AudioPlayer() {
         <div className="w-full max-w-3xl mx-auto p-6 bg-white rounded-2xl border border-slate-200 shadow-2xl">
             <audio
                 ref={audioRef}
-                src={currentTrack.url}
+                src={getPlayableUrl(currentTrack.url)}
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
                 onEnded={handleEnded}

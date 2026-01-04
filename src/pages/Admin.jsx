@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { auth, loginWithGoogle, logout, db, storage } from "../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useLocation } from "react-router-dom";
 import { Trash2, Edit2, Plus, Save, X, LogOut, LogIn, UploadCloud, Settings } from "lucide-react";
@@ -39,25 +39,28 @@ export default function Admin() {
     }, []);
 
     useEffect(() => {
-        if (user) {
-            fetchDemos();
-        }
-    }, [user]);
+        if (!user) return;
 
-    const fetchDemos = async () => {
-        try {
-            // Fallback to simpler query first in case index is missing
-            const q = query(collection(db, "demos"));
-            const querySnapshot = await getDocs(q);
-            const fetchedDemos = querySnapshot.docs.map((doc) => ({
+        // Real-time listener for demos
+        const q = query(collection(db, "demos"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetchedDemos = snapshot.docs.map((doc) => ({
                 id: doc.id,
                 ...doc.data(),
             }));
-            // Sort manually if index is an issue initially
+            // Sort manually to be safe or use orderBy if index exists
             setDemos(fetchedDemos.sort((a, b) => (a.order || 0) - (b.order || 0)));
-        } catch (error) {
-            console.error("Error fetching demos:", error);
-        }
+        }, (error) => {
+            console.error("Firestore listener error:", error);
+            alert("Error syncing data: " + error.message);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+    const fetchDemos = async () => {
+        // fetchDemos is now mostly obsolete because of onSnapshot, 
+        // but we'll keep the function signature for compatibility if needed.
     };
 
     const handleLogin = async () => {
@@ -80,16 +83,42 @@ export default function Admin() {
         e.preventDefault();
 
         // Validate based on mode
-        if (uploadMode === "file" && (!newDemo.name || !newDemo.file)) return;
-        if (uploadMode === "url" && (!newDemo.name || !newDemo.url)) return;
+        if (!newDemo.name || newDemo.name.trim() === "") {
+            alert("Please enter a demo name.");
+            return;
+        }
+
+        if (uploadMode === "file" && !newDemo.file) {
+            alert("Please select a file to upload.");
+            return;
+        }
+
+        if (uploadMode === "url" && !newDemo.url) {
+            alert("Please paste a URL.");
+            return;
+        }
 
         setUploading(true);
         try {
             let finalUrl = newDemo.url;
 
+            if (uploadMode === "url") {
+                // Auto-convert Google Drive links to direct play links
+                const driveMatch = finalUrl.match(/\/file\/d\/([^\/]+)/) || finalUrl.match(/id=([^\&]+)/);
+                if (driveMatch && (finalUrl.includes("drive.google.com") || finalUrl.includes("docs.google.com"))) {
+                    finalUrl = `https://docs.google.com/uc?id=${driveMatch[1]}`;
+                }
+
+                // DropBox conversion
+                if (finalUrl.includes("dropbox.com") && finalUrl.includes("dl=0")) {
+                    finalUrl = finalUrl.replace("dl=0", "raw=1");
+                }
+            }
+
             if (uploadMode === "file") {
                 // If AWS keys exist, act as S3 uploader
                 if (awsConfig.accessKeyId && awsConfig.secretAccessKey) {
+                    console.log("Using S3 for upload...");
                     const s3 = new S3Client({
                         region: awsConfig.region,
                         credentials: {
@@ -104,11 +133,11 @@ export default function Admin() {
                         Key: fileName,
                         Body: newDemo.file,
                         ContentType: newDemo.file.type || 'audio/mpeg',
-                        // ACL: 'public-read' // Only if bucket allows ACLs, often modern buckets use policies
                     }));
 
                     finalUrl = `https://${awsConfig.bucketName}.s3.amazonaws.com/${fileName}`;
                 } else {
+                    console.log("AWS keys missing, falling back to Firebase Storage...");
                     // Fallback to Firebase Storage
                     // 1. Upload file to Storage
                     const storageRef = ref(storage, `vo-audio/${Date.now()}_${newDemo.file.name}`);
@@ -128,7 +157,7 @@ export default function Admin() {
             setNewDemo({ name: "", file: null, url: "" });
             // Reset file input manually
             if (document.getElementById("fileInput")) document.getElementById("fileInput").value = "";
-            fetchDemos();
+            // UI will update automatically via onSnapshot
         } catch (error) {
             console.error("Error adding demo", error);
             alert("Error adding demo: " + error.message);
@@ -141,9 +170,10 @@ export default function Admin() {
         if (!confirm("Are you sure you want to delete this demo?")) return;
         try {
             await deleteDoc(doc(db, "demos", id));
-            fetchDemos();
+            // UI will update automatically via onSnapshot
         } catch (error) {
             console.error("Error deleting demo", error);
+            alert("Error deleting demo: " + error.message);
         }
     };
 
@@ -164,9 +194,10 @@ export default function Admin() {
                 url: editForm.url,
             });
             setEditingId(null);
-            fetchDemos();
+            // UI will update automatically via onSnapshot
         } catch (error) {
             console.error("Error updating demo", error);
+            alert("Error updating demo: " + error.message);
         }
     };
 
@@ -182,9 +213,10 @@ export default function Admin() {
                     createdAt: new Date(),
                 });
             }
-            fetchDemos();
+            // UI will update automatically via onSnapshot
         } catch (error) {
             console.error("Error migrating demos", error);
+            alert("Error migrating demos: " + error.message);
         }
     };
 
@@ -303,6 +335,7 @@ export default function Admin() {
                             type="text"
                             placeholder="Demo Name (e.g. Commercial)"
                             value={newDemo.name}
+                            required
                             onChange={(e) => setNewDemo({ ...newDemo, name: e.target.value })}
                             className="flex-1 px-4 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all self-start mt-8"
                         />
@@ -331,7 +364,21 @@ export default function Admin() {
                                 </label>
                             </div>
 
-                            {uploadMode === "file" ? (
+                            {uploadMode === "url" ? (
+                                <div className="space-y-2">
+                                    <input
+                                        type="text"
+                                        placeholder="https://..."
+                                        value={newDemo.url}
+                                        required
+                                        onChange={(e) => setNewDemo({ ...newDemo, url: e.target.value })}
+                                        className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                                    />
+                                    <p className="text-[10px] text-slate-500 italic">
+                                        Tip: For Google Drive, ensure sharing is set to "Anyone with the link".
+                                    </p>
+                                </div>
+                            ) : (
                                 <div className="relative">
                                     <input
                                         id="fileInput"
@@ -341,14 +388,6 @@ export default function Admin() {
                                         className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                                     />
                                 </div>
-                            ) : (
-                                <input
-                                    type="text"
-                                    placeholder="https://..."
-                                    value={newDemo.url}
-                                    onChange={(e) => setNewDemo({ ...newDemo, url: e.target.value })}
-                                    className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
-                                />
                             )}
                         </div>
 
@@ -357,7 +396,11 @@ export default function Admin() {
                             disabled={!newDemo.name || (uploadMode === "file" ? !newDemo.file : !newDemo.url) || uploading}
                             className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium shadow-md transition-all whitespace-nowrap self-start mt-8"
                         >
-                            {uploading ? "Uploading..." : "Add Demo"}
+                            {uploading ? "Uploading..." : (
+                                uploadMode === "file"
+                                    ? (awsConfig.accessKeyId ? "Add Demo (S3)" : "Add Demo (Firebase)")
+                                    : "Add Demo (URL)"
+                            )}
                         </button>
                     </form>
                 </div>
