@@ -136,7 +136,7 @@ export default function Home() {
     setIsAudioPlaying(false);
 
     if (activeVideo?.id === vid.id) {
-      // Toggle current
+      // Toggle current video
       const action = isPlayingVideo ? 'pauseVideo' : 'playVideo';
       if (videoRef.current) {
         videoRef.current.contentWindow.postMessage(JSON.stringify({
@@ -147,9 +147,9 @@ export default function Home() {
         setIsPlayingVideo(!isPlayingVideo);
       }
     } else {
-      // Switch video
+      // Switch to new video - don't autoplay, let user click play
       setActiveVideo(vid);
-      setIsPlayingVideo(true);
+      setIsPlayingVideo(false);
     }
   };
 
@@ -357,101 +357,12 @@ export default function Home() {
         <div className="container mx-auto px-6 flex justify-between items-center relative">
           <div className="flex items-center gap-6">
             <a href="#" className="flex items-center gap-2 group z-10 relative">
-              <span className="text-2xl font-bold bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-primary)] bg-clip-text text-transparent group-hover:opacity-80 transition">
+              <span className="text-2xl font-semibold bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-primary)] bg-clip-text text-transparent group-hover:opacity-80 transition">
                 {siteContent.siteName}
               </span>
             </a>
 
-            {/* Mini Player */}
-            <div className={`hidden md:flex items-center gap-4 transition-all duration-500 ${showMiniPlayer && (currentAudioTrack || activeVideo) ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 pointer-events-none"}`}>
-              <div ref={miniPlayerRef} className="relative flex items-center gap-3">
-                <button
-                  onClick={isPlayingVideo ? () => handleVideoToggle(activeVideo) : toggleAudioPlay}
-                  className="p-1.5 bg-[var(--theme-primary)] rounded-full text-white hover:brightness-110 shadow-sm transition-all active:scale-95"
-                >
-                  {(isAudioPlaying && !isPlayingVideo) || isPlayingVideo ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
-                </button>
 
-                <button
-                  onClick={() => setMiniPlayerOpen(!miniPlayerOpen)}
-                  className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-[var(--theme-primary)] transition-colors group"
-                >
-                  <span className="max-w-[200px] truncate">
-                    {isPlayingVideo && activeVideo ? activeVideo.title : currentAudioTrack?.name || "Select media"}
-                  </span>
-                  <ChevronDown size={14} className={`transition-transform duration-200 ${miniPlayerOpen ? "rotate-180 text-[var(--theme-primary)]" : "text-slate-400 group-hover:text-[var(--theme-primary)]"}`} />
-                </button>
-
-                {/* Dropdown Menu */}
-                <AnimatePresence>
-                  {miniPlayerOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute top-full left-0 mt-4 w-72 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50 max-h-96 overflow-y-auto"
-                    >
-                      {/* Audio Demos Section */}
-                      {demos.length > 0 && (
-                        <>
-                          <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Demos</div>
-                          {demos.map((demo, i) => (
-                            <button
-                              key={demo.id}
-                              onClick={() => {
-                                setCurrentAudioIndex(i);
-                                setIsAudioPlaying(true);
-                                setIsPlayingVideo(false);
-                                setMiniPlayerOpen(false);
-                              }}
-                              className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 hover:bg-slate-50 transition-colors ${i === currentAudioIndex && isAudioPlaying && !isPlayingVideo ? "text-[var(--theme-primary)] font-medium bg-[var(--theme-primary)]/5" : "text-slate-600"}`}
-                            >
-                              <Mic size={16} className="flex-shrink-0" />
-                              <span className="truncate flex-1">{demo.name}</span>
-                              {i === currentAudioIndex && isAudioPlaying && !isPlayingVideo && (
-                                <div className="flex-shrink-0">
-                                  <div className="w-3 h-3 bg-[var(--theme-primary)] rounded-full animate-pulse" />
-                                </div>
-                              )}
-                            </button>
-                          ))}
-                        </>
-                      )}
-
-                      {/* Videos Section */}
-                      {videos.length > 0 && (
-                        <>
-                          <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider mt-2 border-t border-slate-100">Projects</div>
-                          {videos.map((vid) => (
-                            <button
-                              key={vid.id}
-                              onClick={() => {
-                                setActiveVideo(vid);
-                                setIsPlayingVideo(true);
-                                setIsAudioPlaying(false);
-                                setMiniPlayerOpen(false);
-                                // Scroll to projects section
-                                document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' });
-                              }}
-                              className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 hover:bg-slate-50 transition-colors ${activeVideo?.id === vid.id && isPlayingVideo ? "text-[var(--theme-primary)] font-medium bg-[var(--theme-primary)]/5" : "text-slate-600"}`}
-                            >
-                              <Video size={16} className="flex-shrink-0" />
-                              <span className="truncate flex-1">{vid.title}</span>
-                              {activeVideo?.id === vid.id && isPlayingVideo && (
-                                <div className="flex-shrink-0">
-                                  <div className="w-3 h-3 bg-[var(--theme-primary)] rounded-full animate-pulse" />
-                                </div>
-                              )}
-                            </button>
-                          ))}
-                        </>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
           </div>
 
           {/* Desktop Nav */}
@@ -842,6 +753,116 @@ export default function Home() {
             return null;
         }
       })}
+
+      {/* Sticky Bottom Mini Player Bar */}
+      <AnimatePresence>
+        {showMiniPlayer && (currentAudioTrack || activeVideo) && (
+          <motion.div
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl"
+          >
+            <div className="container mx-auto px-6 py-4">
+              <div ref={miniPlayerRef} className="flex items-center justify-between gap-4">
+                {/* Left: Play/Pause Button */}
+                <button
+                  onClick={isPlayingVideo ? () => handleVideoToggle(activeVideo) : toggleAudioPlay}
+                  className="p-3 bg-[var(--theme-primary)] rounded-full text-white hover:brightness-110 shadow-lg transition-all active:scale-95 flex-shrink-0"
+                  aria-label={isAudioPlaying || isPlayingVideo ? "Pause" : "Play"}
+                >
+                  {(isAudioPlaying && !isPlayingVideo) || isPlayingVideo ? (
+                    <Pause size={20} fill="currentColor" />
+                  ) : (
+                    <Play size={20} fill="currentColor" className="ml-0.5" />
+                  )}
+                </button>
+
+                {/* Right: Track Info & Dropdown */}
+                <div className="flex-1 relative">
+                  <button
+                    onClick={() => setMiniPlayerOpen(!miniPlayerOpen)}
+                    className="w-full flex items-center gap-2 text-left group"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-slate-800 truncate flex items-center gap-2">
+                        <span className="truncate">{isPlayingVideo && activeVideo ? activeVideo.title : currentAudioTrack?.name || "Select media"}</span>
+                        <ChevronDown
+                          size={16}
+                          className={`flex-shrink-0 transition-transform duration-200 ${miniPlayerOpen ? "rotate-180 text-[var(--theme-primary)]" : "text-slate-400 group-hover:text-[var(--theme-primary)]"}`}
+                        />
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {isPlayingVideo ? "Project" : "Demo"}
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  <AnimatePresence>
+                    {miniPlayerOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute bottom-full left-0 right-0 mb-4 bg-white rounded-xl shadow-xl border border-slate-100 py-2 max-h-[600px] overflow-y-auto"
+                      >
+                        {/* Audio Demos Section */}
+                        {demos.length > 0 && (
+                          <>
+                            <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Demos</div>
+                            {demos.map((demo, i) => (
+                              <button
+                                key={demo.id}
+                                onClick={() => {
+                                  setCurrentAudioIndex(i);
+                                  setIsAudioPlaying(true);
+                                  setIsPlayingVideo(false);
+                                  setMiniPlayerOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 hover:bg-slate-50 transition-colors ${i === currentAudioIndex && isAudioPlaying && !isPlayingVideo ? "text-[var(--theme-primary)] font-medium bg-[var(--theme-primary)]/5" : "text-slate-600"}`}
+                              >
+                                <Mic size={16} className="flex-shrink-0" />
+                                <span className="truncate flex-1">{demo.name}</span>
+                              </button>
+                            ))}
+                          </>
+                        )}
+
+                        {/* Videos Section */}
+                        {videos.length > 0 && (
+                          <>
+                            <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider mt-2 border-t border-slate-100">Projects</div>
+                            {videos.map((vid) => (
+                              <button
+                                key={vid.id}
+                                onClick={() => {
+                                  setActiveVideo(vid);
+                                  setIsPlayingVideo(false);
+                                  setIsAudioPlaying(false);
+                                  setMiniPlayerOpen(false);
+                                  // Scroll to projects section
+                                  document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' });
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 hover:bg-slate-50 transition-colors ${activeVideo?.id === vid.id && isPlayingVideo ? "text-[var(--theme-primary)] font-medium bg-[var(--theme-primary)]/5" : "text-slate-600"}`}
+                              >
+                                <Video size={16} className="flex-shrink-0" />
+                                <span className="truncate flex-1">{vid.title}</span>
+                              </button>
+                            ))}
+                          </>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <footer className="pt-2 pb-12 text-center text-slate-400 text-sm bg-slate-50 relative flex justify-center items-center">
         <p>Designed by <a href="https://nathanpuls.com" className="hover:text-[var(--theme-primary)] text-slate-500 transition-colors">Nathan Puls</a></p>
