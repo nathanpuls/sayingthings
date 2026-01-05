@@ -8,19 +8,19 @@ To enable the Admin features (adding/editing/deleting demos), you need to set up
 3. **Enable Firestore Database**:
    - Go to "Firestore Database" -> "Create database".
    - Start in **Production mode**.
-   - Go to the "Rules" tab and paste this logic to allow read for everyone but write only for you:
+   - Go to the "Rules" tab and paste this logic to allow read for everyone but write only for you. This covers all collections like demos, projects, studio, etc.:
      ```
      rules_version = '2';
      service cloud.firestore {
        match /databases/{database}/documents {
-         match /demos/{demo} {
+         match /{document=**} {
            allow read: if true;
            allow write: if request.auth != null && request.auth.token.email == "natepuls@gmail.com";
          }
        }
      }
      ```
-     *(Replace `YOUR_EMAIL@gmail.com` with your actual email)*
+     *(Replace `natepuls@gmail.com` with your actual email if different)*
 6. **Enable Storage**:
    - Go to "Storage" in the left sidebar.
    - Click "Get started".

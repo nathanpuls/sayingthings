@@ -1,54 +1,83 @@
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import AudioPlayer from "../components/AudioPlayer";
+import VideoCard from "../components/VideoCard";
 import { Mic, Video, Users, MessageSquare, User, Mail, Phone, Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-const studioGear = [
-  { name: "Neumann TLM 103", img: "studio-images/neumann-tlm-103.png" },
-  { name: "Rode NTG-3", img: "studio-images/rode-ntg-3.jpg" },
-  { name: "Macbook Pro", img: "studio-images/macbook-pro.png" },
-  { name: "Apogee Duet", img: "studio-images/apogee-duet.png" },
-  { name: "Logic Pro X", img: "studio-images/logic-pro-x.jpeg" },
-  { name: "Source Connect", img: "studio-images/source-connect.jpeg" },
-];
-
-const clients = [
-  "client-images/apple.jpeg",
-  "client-images/farmers-only.jpeg",
-  "client-images/florida-state-parks.jpeg",
-  "client-images/freeletics.jpeg",
-  "client-images/gatorade.png",
-  "client-images/hp.jpeg",
-  "client-images/ziploc.jpeg",
-  "client-images/lavazza.jpeg",
-  "client-images/smart-design.jpeg",
-  "client-images/waste-management.jpeg",
-];
-
-const reviews = [
-  { text: "Nathan is a joy to work with.", author: "BookheadEd Learning" },
-  { text: "Above and beyond.", author: "Segal Benz" },
-  { text: "Never thought of putting an accent on my recording.", author: "Mr. Wizard, Inc" },
-  { text: "Fast delivery, followed direction perfectly!", author: "Sonya Fernandes" },
-  { text: "Great flexibility and quality.", author: "Jasper Dekker / Smart Design" },
-];
-
-const videos = [
-  "lskrj62JbNI", // Freeletics
-  "C-GdK49QZVs", // Getinge
-  "QVTGS9ZAk60", // Florida State Parks
-  "friJGg6UDvo", // Farmers Only
-];
+import { db } from "../lib/firebase";
+import { collection, onSnapshot, query, doc } from "firebase/firestore";
 
 export default function Home() {
+  const { uid } = useParams();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Firestore Data States
+  const [studioGear, setStudioGear] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [videos, setVideos] = useState([]);
+  const [activeVideo, setActiveVideo] = useState(null);
+
+  // Set initial active video when videos load
+  useEffect(() => {
+    if (videos.length > 0 && !activeVideo) {
+      setActiveVideo(videos[0]);
+    }
+  }, [videos]);
+
+  const [siteContent, setSiteContent] = useState({
+    heroTitle: "",
+    heroSubtitle: "",
+    aboutTitle: "",
+    aboutText: "",
+    contactEmail: "",
+    contactPhone: "",
+    siteName: "",
+    profileImage: "",
+    profileCartoon: "",
+    themeColor: "#4f46e5"
+  });
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+
+    // Firestore Subscriptions
+    const syncCollection = (collName, setter) => {
+      // If uid exists, fetch from users/{uid}/{collName}, else default to root {collName}
+      const ref = uid
+        ? collection(db, "users", uid, collName)
+        : collection(db, collName);
+
+      return onSnapshot(query(ref), (snapshot) => {
+        const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setter(docs.sort((a, b) => (a.order || 0) - (b.order || 0)));
+      });
+    };
+
+    const unsubStudio = syncCollection("studio", setStudioGear);
+    const unsubClients = syncCollection("clients", setClients);
+    const unsubReviews = syncCollection("reviews", setReviews);
+    const unsubVideos = syncCollection("videos", setVideos);
+
+    const settingsRef = uid
+      ? doc(db, "users", uid, "settings", "siteContent")
+      : doc(db, "settings", "siteContent");
+
+    const unsubContent = onSnapshot(settingsRef, (doc) => {
+      if (doc.exists()) setSiteContent(doc.data());
+    });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      unsubStudio();
+      unsubClients();
+      unsubReviews();
+      unsubVideos();
+      unsubContent();
+    };
+  }, [uid]);
 
   const navLinks = [
     { name: "Demos", href: "#demos" },
@@ -62,6 +91,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      <style>{`
+        :root {
+          --theme-primary: ${siteContent.themeColor || '#4f46e5'};
+        }
+      `}</style>
       {/* Navbar */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm py-4 border-b border-slate-200" : "bg-transparent py-6"
@@ -69,9 +103,8 @@ export default function Home() {
       >
         <div className="container mx-auto px-6 flex justify-between items-center">
           <a href="#" className="flex items-center gap-2 group">
-            {/* Logo placeholder or text */}
-            <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent group-hover:opacity-80 transition">
-              Nathan Puls
+            <span className="text-2xl font-bold bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-primary)] bg-clip-text text-transparent group-hover:opacity-80 transition">
+              {siteContent.siteName}
             </span>
           </a>
 
@@ -81,7 +114,7 @@ export default function Home() {
               <a
                 key={link.name}
                 href={link.href}
-                className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors"
+                className="text-sm font-medium text-slate-600 hover:text-[var(--theme-primary)] transition-colors"
               >
                 {link.name}
               </a>
@@ -128,10 +161,12 @@ export default function Home() {
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-100 via-slate-50 to-slate-50 -z-10" />
         <div className="container mx-auto max-w-4xl text-center mb-12">
           <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight text-slate-900">
-            Saying <span className="text-indigo-600">Things</span>
+            {siteContent.heroTitle.split(' ').map((word, i) => (
+              <span key={i}>{i === 1 ? <span className="text-[var(--theme-primary)]">{word}</span> : word}{' '}</span>
+            ))}
           </h1>
           <p className="text-xl text-slate-500 mb-12 max-w-2xl mx-auto">
-            Professional Voice Over services tailored to bring your script to life.
+            {siteContent.heroSubtitle}
           </p>
           <AudioPlayer />
         </div>
@@ -141,21 +176,64 @@ export default function Home() {
       <section id="projects" className="py-20 px-6 bg-slate-100/50">
         <div className="container mx-auto">
           <SectionHeader title="Projects" icon={<Video />} />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {videos.map((id) => (
-              <div key={id} className="rounded-xl overflow-hidden shadow-lg hover:shadow-xl border border-slate-200 hover:border-indigo-300 transition-all bg-white">
-                <div className="aspect-video">
+          <div className="flex flex-col lg:flex-row gap-8 max-w-6xl mx-auto">
+            {/* Main Player */}
+            <div className="flex-1">
+              {activeVideo ? (
+                <div className="rounded-xl overflow-hidden shadow-2xl border border-slate-200 bg-black aspect-video">
                   <iframe
                     width="100%"
                     height="100%"
-                    src={`https://www.youtube.com/embed/${id}`}
+                    src={`https://www.youtube.com/embed/${activeVideo.youtubeId}?rel=0&autoplay=1`}
+                    title={activeVideo.title}
                     frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                     className="w-full h-full"
                   />
                 </div>
-              </div>
-            ))}
+              ) : (
+                <div className="aspect-video bg-slate-200 rounded-xl flex items-center justify-center text-slate-400">
+                  Select a video
+                </div>
+              )}
+              {activeVideo && (
+                <div className="mt-4">
+                  <h3 className="text-2xl font-bold text-slate-800">{activeVideo.title}</h3>
+                </div>
+              )}
+            </div>
+
+            {/* Playlist Sidebar */}
+            <div className="lg:w-1/3 flex flex-col gap-3 h-[500px] overflow-y-auto pr-2">
+              {videos.map((vid) => (
+                <button
+                  key={vid.id}
+                  onClick={() => setActiveVideo(vid)}
+                  className={`flex items-center gap-3 p-3 rounded-lg transition-all text-left border ${activeVideo?.id === vid.id
+                    ? "bg-[var(--theme-primary)]/10 border-[var(--theme-primary)]"
+                    : "bg-white border-slate-100 hover:border-[var(--theme-primary)]/50 hover:bg-slate-50"
+                    }`}
+                >
+                  <div className="relative w-24 aspect-video rounded-md overflow-hidden flex-shrink-0 bg-slate-200">
+                    <img
+                      src={`https://img.youtube.com/vi/${vid.youtubeId}/mqdefault.jpg`}
+                      alt={vid.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className={`text-sm font-semibold truncate ${activeVideo?.id === vid.id ? "text-[var(--theme-primary)]" : "text-slate-700"}`}>
+                      {vid.title}
+                    </h4>
+                    <p className="text-xs text-slate-400 truncate">Play Video</p>
+                  </div>
+                  {activeVideo?.id === vid.id && (
+                    <div className="w-2 h-2 rounded-full bg-[var(--theme-primary)]"></div>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -166,9 +244,9 @@ export default function Home() {
           <SectionHeader title="Studio" icon={<Mic />} />
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {studioGear.map((item) => (
-              <div key={item.name} className="glass-card rounded-xl p-6 flex flex-col items-center gap-4 text-center group bg-white">
+              <div key={item.id} className="glass-card rounded-xl p-6 flex flex-col items-center gap-4 text-center group bg-white shadow-sm hover:shadow-md transition-all border border-slate-100">
                 <div className="h-32 flex items-center justify-center p-2">
-                  <img src={item.img} alt={item.name} className="max-h-full max-w-full object-contain filter transition group-hover:scale-105" />
+                  <img src={item.url} alt={item.name} className="max-h-full max-w-full object-contain filter transition group-hover:scale-105" />
                 </div>
                 <h3 className="font-semibold text-slate-800">{item.name}</h3>
               </div>
@@ -182,9 +260,9 @@ export default function Home() {
         <div className="container mx-auto">
           <SectionHeader title="Clients" icon={<Users />} />
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 max-w-5xl mx-auto items-center">
-            {clients.map((src, i) => (
-              <div key={i} className="bg-white rounded-lg p-4 h-24 flex items-center justify-center hover:scale-105 transition-transform duration-300 shadow-sm hover:shadow-md border border-slate-100">
-                <img src={src} alt="Client Logo" className="max-h-full max-w-full object-contain grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" />
+            {clients.map((client) => (
+              <div key={client.id} className="bg-white rounded-lg p-4 h-24 flex items-center justify-center hover:scale-105 transition-transform duration-300 shadow-sm hover:shadow-md border border-slate-100">
+                <img src={client.url} alt="Client Logo" className="max-h-full max-w-full object-contain grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" />
               </div>
             ))}
           </div>
@@ -196,10 +274,10 @@ export default function Home() {
         <div className="container mx-auto">
           <SectionHeader title="Reviews" icon={<MessageSquare />} />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {reviews.map((review, i) => (
-              <div key={i} className="glass-card p-8 rounded-xl relative bg-white">
-                <p className="text-lg italic text-slate-600 mb-6 font-serif">"{review.text}"</p>
-                <div className="text-sm font-semibold text-indigo-600">{review.author}</div>
+            {reviews.map((review) => (
+              <div key={review.id} className="glass-card p-8 rounded-xl relative bg-white border border-slate-100 shadow-sm">
+                <p className="text-lg italic text-slate-600 mb-6 font-serif leading-relaxed">"{review.text}"</p>
+                <div className="text-sm font-semibold text-[var(--theme-primary)]">{review.author}</div>
               </div>
             ))}
           </div>
@@ -212,13 +290,12 @@ export default function Home() {
           <SectionHeader title="About" icon={<User />} />
           <div className="flex flex-col md:flex-row items-center gap-12">
             <div className="w-full md:w-1/2">
-              <img src="images/profile.jpeg" alt="Nathan Puls" className="rounded-2xl shadow-xl border border-slate-200 w-full" />
+              <img src={siteContent.profileImage} alt={siteContent.siteName} className="rounded-2xl shadow-xl border border-slate-200 w-full" />
             </div>
             <div className="w-full md:w-1/2 text-lg text-slate-600 leading-relaxed">
-              <p className="mb-6 font-semibold text-xl text-slate-800">It all started with acting in Los Angeles.</p>
-              <p>
-                Now, with over a decade of experience in voice over and improv comedy I'm excited to bring your script to life!
-                Currently based in the vibrant city of Houston, I'm ready to collaborate with you to create something truly amazing.
+              <p className="mb-6 font-semibold text-xl text-slate-800">{siteContent.aboutTitle}</p>
+              <p className="whitespace-pre-line">
+                {siteContent.aboutText}
               </p>
             </div>
           </div>
@@ -229,19 +306,19 @@ export default function Home() {
       <section id="contact" className="py-20 px-6">
         <div className="container mx-auto max-w-2xl text-center">
           <SectionHeader title="Contact" icon={<Mail />} />
-          <div className="glass-card p-10 rounded-2xl relative overflow-hidden bg-white">
+          <div className="glass-card p-10 rounded-2xl relative overflow-hidden bg-white border border-slate-100 shadow-sm">
             <div className="absolute top-0 right-0 p-4 opacity-10">
-              <img src="images/profile-cartoon-no-bg.png" className="w-24 h-24 object-contain" />
+              <img src={siteContent.profileCartoon} className="w-24 h-24 object-contain" />
             </div>
-            <h3 className="text-2xl font-bold mb-8 text-slate-900">Nathan Puls</h3>
+            <h3 className="text-2xl font-bold mb-8 text-slate-900">{siteContent.siteName}</h3>
             <div className="flex flex-col gap-4 items-center">
-              <a href="mailto:nathan@sayingthings.com" className="flex items-center gap-3 text-lg text-slate-600 hover:text-indigo-600 transition-colors font-medium">
-                <Mail className="w-6 h-6 text-indigo-500" />
-                nathan@sayingthings.com
+              <a href={`mailto:${siteContent.contactEmail}`} className="flex items-center gap-3 text-lg text-slate-600 hover:text-[var(--theme-primary)] transition-colors font-medium">
+                <Mail className="w-6 h-6 text-[var(--theme-primary)]" />
+                {siteContent.contactEmail}
               </a>
-              <a href="tel:+13233958384" className="flex items-center gap-3 text-lg text-slate-600 hover:text-indigo-600 transition-colors font-medium">
-                <Phone className="w-6 h-6 text-indigo-500" />
-                323-395-8384
+              <a href={`tel:${siteContent.contactPhone.replace(/[^0-9+]/g, '')}`} className="flex items-center gap-3 text-lg text-slate-600 hover:text-[var(--theme-primary)] transition-colors font-medium">
+                <Phone className="w-6 h-6 text-[var(--theme-primary)]" />
+                {siteContent.contactPhone}
               </a>
             </div>
           </div>
@@ -258,7 +335,7 @@ export default function Home() {
 function SectionHeader({ title, icon }) {
   return (
     <div className="flex items-center justify-center gap-3 mb-12">
-      <span className="p-3 bg-indigo-50 rounded-full text-indigo-600 shadow-sm">{icon}</span>
+      <span className="p-3 bg-slate-100 rounded-full text-[var(--theme-primary)] shadow-sm">{icon}</span>
       <h2 className="text-3xl md:text-4xl font-bold text-slate-900">{title}</h2>
     </div>
   )

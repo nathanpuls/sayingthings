@@ -108,7 +108,7 @@ export default function AudioPlayer() {
 
             <div className="flex flex-col gap-6">
                 <div className="text-center">
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent">
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-primary)] bg-clip-text text-transparent">
                         {currentTrack.name}
                     </h3>
                     <p className="text-slate-500 text-sm mt-1">Nathan Puls Voice Over</p>
@@ -122,24 +122,24 @@ export default function AudioPlayer() {
                         max={duration || 0}
                         value={currentTime}
                         onChange={handleSeek}
-                        className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                        className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[var(--theme-primary)]"
                     />
                     <span className="text-xs text-slate-500 w-10">{formatTime(duration)}</span>
                 </div>
 
                 <div className="flex items-center justify-center gap-6">
-                    <button onClick={prevTrack} className="p-2 text-slate-400 hover:text-indigo-600 transition">
+                    <button onClick={prevTrack} className="p-2 text-slate-400 hover:text-[var(--theme-primary)] transition">
                         <SkipBack size={24} />
                     </button>
 
                     <button
                         onClick={togglePlay}
-                        className="p-4 bg-indigo-600 hover:bg-indigo-700 rounded-full text-white shadow-lg shadow-indigo-200 transition-all transform hover:scale-105"
+                        className="p-4 bg-[var(--theme-primary)] hover:brightness-90 rounded-full text-white shadow-lg shadow-slate-300 transition-all transform hover:scale-105"
                     >
                         {isPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1" />}
                     </button>
 
-                    <button onClick={nextTrack} className="p-2 text-slate-400 hover:text-indigo-600 transition">
+                    <button onClick={nextTrack} className="p-2 text-slate-400 hover:text-[var(--theme-primary)] transition">
                         <SkipForward size={24} />
                     </button>
                 </div>
@@ -154,8 +154,8 @@ export default function AudioPlayer() {
                                     setIsPlaying(true);
                                 }}
                                 className={`w-full flex items-center justify-between p-3 rounded-lg text-sm transition-all ${currentTrackIndex === i
-                                    ? "bg-indigo-50 text-indigo-700 border border-indigo-100"
-                                    : "hover:bg-slate-50 text-slate-600 hover:text-indigo-600"
+                                    ? "bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] border border-[var(--theme-primary)]/20"
+                                    : "hover:bg-slate-50 text-slate-600 hover:text-[var(--theme-primary)]"
                                     }`}
                             >
                                 <div className="flex items-center gap-3">
@@ -169,7 +169,7 @@ export default function AudioPlayer() {
                                                 key={bar}
                                                 animate={{ height: [4, 12, 4] }}
                                                 transition={{ duration: 0.5, repeat: Infinity, delay: bar * 0.1 }}
-                                                className="w-1 bg-indigo-500 rounded-full"
+                                                className="w-1 bg-[var(--theme-primary)] rounded-full"
                                             />
                                         ))}
                                     </div>
