@@ -2,10 +2,8 @@ import { useState, useEffect, useRef, ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { getUserIdFromDomain } from "../lib/domains";
-// import { demos as staticDemos } from "../content/demos"; // Unused
 import { applyFont } from "../lib/fonts";
 import AudioPlayer from "../components/AudioPlayer";
-// import VideoCard from "../components/VideoCard"; // Unused
 import { Mic, Video, Users, MessageSquare, User, Mail, Phone, Menu, X, Play, Pause, Check, Settings, ChevronDown, LogIn, Sparkles, Zap, Globe, Layout, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import FadeInSection from "../components/FadeInSection";
@@ -262,6 +260,7 @@ export default function Home() {
           web3FormsKey: settings.web3_forms_key || "",
           showContactForm: settings.show_contact_form !== false
         });
+        if (settings.font) applyFont(settings.font);
       }
 
       // Hide loader as soon as settings are in (so user sees the site structure)
