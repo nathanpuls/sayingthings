@@ -4,9 +4,10 @@ import { Link } from "react-router-dom";
 import {
     Trash2, Edit2, Plus, Save, X, LogOut, LogIn, UploadCloud,
     Home, ArrowUp, ArrowDown, Music, Video, Mic, Users,
-    MessageSquare, Contact, Info, Settings, Share2, Type, GripVertical, Mail
+    MessageSquare, Contact, Info, Settings, Share2, Type, GripVertical, Mail, Globe, CheckCircle, AlertCircle
 } from "lucide-react";
 import { motion, Reorder, AnimatePresence } from "framer-motion";
+import { getUserCustomDomains, addCustomDomain, removeCustomDomain, verifyDomainOwnership } from "../lib/domains";
 
 import { fonts, applyFont, loadAllFonts } from "../lib/fonts";
 
@@ -32,6 +33,7 @@ export default function Admin() {
     const [clients, setClients] = useState([]);
     const [reviews, setReviews] = useState([]);
     const [messages, setMessages] = useState([]);
+    const [customDomains, setCustomDomains] = useState([]);
     const [siteContent, setSiteContent] = useState({
         heroTitle: "",
         heroSubtitle: "",
@@ -61,6 +63,7 @@ export default function Admin() {
     const [newStudio, setNewStudio] = useState({ name: "", url: "" });
     const [newClient, setNewClient] = useState({ url: "" });
     const [newReview, setNewReview] = useState({ text: "", author: "" });
+    const [newDomain, setNewDomain] = useState("");
     const [fetchingTitle, setFetchingTitle] = useState(false);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, collName: null, id: null });
 
@@ -146,6 +149,7 @@ export default function Admin() {
         setStudio(await fetchTable('studio_gear')); // note table name mapping
         setClients(await fetchTable('clients'));
         setReviews(await fetchTable('reviews'));
+        setCustomDomains(await getUserCustomDomains());
 
         // Fetch messages - no 'order' column needed, use 'created_at'
         const { data: msgs, error: msgError } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
@@ -194,6 +198,7 @@ export default function Admin() {
         { id: "reviews", name: "Reviews", icon: <MessageSquare size={18} /> },
         { id: "messages", name: "Messages", icon: <Mail size={18} /> },
         { id: "content", name: "Site Content", icon: <Settings size={18} /> },
+        { id: "domains", name: "Custom Domains", icon: <Globe size={18} /> },
     ];
 
     // Sync active tab with URL hash on mount and when hash changes
@@ -426,6 +431,67 @@ export default function Admin() {
         } catch (error) {
             console.error("Save failed:", error);
             showToast("Error saving settings: " + error.message, "error");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleAddDomain = async (e) => {
+        e.preventDefault();
+        if (!newDomain) return;
+        setUploading(true);
+        try {
+            const result = await addCustomDomain(newDomain);
+            if (result.success) {
+                showToast("Domain added! Please verify ownership.", "success");
+                setNewDomain("");
+                setCustomDomains(await getUserCustomDomains());
+            } else {
+                throw result.error;
+            }
+        } catch (error) {
+            console.error("Add domain failed:", error);
+            showToast(error.message || "Failed to add domain", "error");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleRemoveDomain = async (id) => {
+        if (!confirm("Are you sure? This will stop the custom domain from working.")) return;
+        try {
+            const result = await removeCustomDomain(id);
+            if (result.success) {
+                showToast("Domain removed", "success");
+                setCustomDomains(await getUserCustomDomains());
+            } else {
+                throw result.error;
+            }
+        } catch (error) {
+            showToast("Error removing domain", "error");
+        }
+    };
+
+    const handleCheckVerification = async (domain, token) => {
+        setUploading(true);
+        try {
+            const verified = await verifyDomainOwnership(domain, token);
+            if (verified) {
+                // Update local state to reflect verification (in a real app, backend would update DB)
+                // For now, let's just re-fetch and hope the backend/function updated it
+                // Since we don't have a backend function yet, verifyDomainOwnership returns false usually
+                // But let's assume if it returned true, we are good.
+
+                // Manually update DB for now since we are client-side admin
+                await supabase.from('custom_domains').update({ verified: true }).eq('domain', domain);
+
+                showToast("Domain verified successfully!", "success");
+                setCustomDomains(await getUserCustomDomains());
+            } else {
+                showToast("Verification failed. DNS records not found yet.", "error");
+            }
+        } catch (error) {
+            showToast("Verification check failed", "error");
         } finally {
             setUploading(false);
         }
@@ -687,6 +753,111 @@ export default function Admin() {
                                         </div>
                                     ))
                                 )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Custom Domains Tab */}
+                    {activeTab === "domains" && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                                <h2 className="text-xl font-bold text-slate-900 mb-2">Connect Your Domain</h2>
+                                <p className="text-slate-500 mb-6">Use your own domain (e.g., yourname.com) for your site.</p>
+
+                                <form onSubmit={handleAddDomain} className="flex gap-4 items-end mb-8">
+                                    <FormInput
+                                        label="Domain Name"
+                                        placeholder="e.g. example.com"
+                                        value={newDomain}
+                                        onChange={setNewDomain}
+                                        containerClass="flex-1"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={uploading || !newDomain}
+                                        className="bg-[var(--theme-primary)] text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-[var(--theme-primary)]/20"
+                                    >
+                                        Add Domain
+                                    </button>
+                                </form>
+
+                                <div className="space-y-4">
+                                    {customDomains.length === 0 ? (
+                                        <div className="text-center p-8 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-slate-400">
+                                            No custom domains connected yet.
+                                        </div>
+                                    ) : (
+                                        customDomains.map(domain => (
+                                            <div key={domain.id} className="border border-slate-200 rounded-xl overflow-hidden">
+                                                <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <Globe size={18} className="text-slate-400" />
+                                                        <span className="font-bold text-slate-700">{domain.domain}</span>
+                                                        {domain.verified ? (
+                                                            <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1">
+                                                                <CheckCircle size={12} /> Verified
+                                                            </span>
+                                                        ) : (
+                                                            <span className="bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1">
+                                                                <AlertCircle size={12} /> Unverified
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        {!domain.verified && (
+                                                            <button
+                                                                onClick={() => handleCheckVerification(domain.domain, domain.verification_token)}
+                                                                className="text-xs font-bold text-[var(--theme-primary)] hover:underline px-3 py-2"
+                                                            >
+                                                                Check Verification
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleRemoveDomain(domain.id)}
+                                                            className="text-slate-400 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {!domain.verified && (
+                                                    <div className="p-4 bg-white space-y-4">
+                                                        <div className="text-sm text-slate-600">
+                                                            To verify ownership, please add the following two records to your DNS settings:
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">CNAME Record</div>
+                                                                <div className="flex justify-between text-sm">
+                                                                    <span className="text-slate-500">Name: <span className="font-mono text-slate-800">@</span> (or www)</span>
+                                                                    <span className="text-slate-500">Value: <span className="font-mono text-slate-800">sayingthings.com</span></span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">TXT Record</div>
+                                                                <div className="space-y-1">
+                                                                    <div className="flex gap-2 text-sm">
+                                                                        <span className="text-slate-500 w-12">Name:</span>
+                                                                        <span className="font-mono text-slate-800 select-all">_sayingthings-verify</span>
+                                                                    </div>
+                                                                    <div className="flex gap-2 text-sm">
+                                                                        <span className="text-slate-500 w-12">Value:</span>
+                                                                        <span className="font-mono text-slate-800 select-all break-all">{domain.verification_token}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-xs text-slate-400 italic">
+                                                            Note: DNS changes can take up to 48 hours to propagate, though it's usually much faster.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}

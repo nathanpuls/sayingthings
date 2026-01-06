@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { getUserIdFromDomain, isCustomDomain } from "../lib/domains";
 import { demos as staticDemos } from "../content/demos";
 import { applyFont } from "../lib/fonts";
 import AudioPlayer from "../components/AudioPlayer";
@@ -180,11 +181,22 @@ export default function Home() {
     window.addEventListener("scroll", handleScroll);
 
     const fetchData = async () => {
-      // Small delay prevents flash if loading is too fast, but ensured consistent state
-      if (!uid) { setLoading(false); return; }
+      // Check if we're on a custom domain first
+      let userId = uid;
+
+      if (!userId) {
+        // Try to get user ID from custom domain
+        userId = await getUserIdFromDomain();
+      }
+
+      // If still no user ID, just show loading false (no data to load)
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
 
       const fetchTable = async (table) => {
-        const { data, error } = await supabase.from(table).select('*').eq('user_id', uid).order('order', { ascending: true });
+        const { data, error } = await supabase.from(table).select('*').eq('user_id', userId).order('order', { ascending: true });
         if (error) console.error(`Error fetching ${table}:`, error);
         return data || [];
       };
@@ -194,7 +206,7 @@ export default function Home() {
       setClients(await fetchTable('clients'));
       setReviews(await fetchTable('reviews'));
       setVideos(await fetchTable('videos'));
-      const { data: settings } = await supabase.from('site_settings').select('*').eq('user_id', uid).single();
+      const { data: settings } = await supabase.from('site_settings').select('*').eq('user_id', userId).single();
       if (settings) {
         setSiteContent({
           heroTitle: settings.hero_title || "",
