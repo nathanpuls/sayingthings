@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { Link } from "react-router-dom";
 import {
@@ -20,11 +20,18 @@ export default function Admin() {
     const [activeTab, setActiveTab] = useState("demos");
     const [uploading, setUploading] = useState(false);
     const [toast, setToast] = useState(null); // { message, type: 'success' | 'error' }
+    const toastTimeoutRef = useRef(null);
 
     const showToast = (message, type = 'success') => {
+        if (toastTimeoutRef.current) {
+            clearTimeout(toastTimeoutRef.current);
+        }
         setToast({ message, type });
         // Keep errors for 10 seconds, success messages for 3 seconds
-        setTimeout(() => setToast(null), type === 'error' ? 10000 : 3000);
+        toastTimeoutRef.current = setTimeout(() => {
+            setToast(null);
+            toastTimeoutRef.current = null;
+        }, type === 'error' ? 10000 : 3000);
     };
 
     // Data States
