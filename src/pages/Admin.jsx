@@ -23,7 +23,8 @@ export default function Admin() {
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type });
-        setTimeout(() => setToast(null), 3000);
+        // Keep errors for 10 seconds, success messages for 3 seconds
+        setTimeout(() => setToast(null), type === 'error' ? 10000 : 3000);
     };
 
     // Data States
