@@ -112,6 +112,10 @@ export async function verifyDomainOwnership(domain, token) {
  */
 export async function addCustomDomain(domain) {
     try {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("User not authenticated");
+
         // Clean the domain
         const cleanDomain = domain.toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
 
@@ -121,6 +125,7 @@ export async function addCustomDomain(domain) {
         const { data, error } = await supabase
             .from('custom_domains')
             .insert([{
+                user_id: user.id,
                 domain: cleanDomain,
                 verification_token: verificationToken,
                 verified: false
