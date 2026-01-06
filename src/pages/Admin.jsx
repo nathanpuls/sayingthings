@@ -867,8 +867,8 @@ export default function Admin() {
                                                                     <div className="flex items-center justify-between text-sm">
                                                                         <span className="text-slate-500">Value:</span>
                                                                         <div className="flex items-center gap-2 bg-white px-2 py-1 rounded border border-slate-100">
-                                                                            <span className="font-mono text-slate-800">{window.location.hostname.includes('localhost') ? 'sayingthings.com' : window.location.hostname}</span>
-                                                                            <button onClick={() => { navigator.clipboard.writeText(window.location.hostname.includes('localhost') ? 'sayingthings.com' : window.location.hostname); showToast("Copied!", "success"); }} className="text-slate-400 hover:text-[var(--theme-primary)] transition-colors" title="Copy"><Copy size={12} /></button>
+                                                                            <span className="font-mono text-slate-800">sayingthings.com</span>
+                                                                            <button onClick={() => { navigator.clipboard.writeText("sayingthings.com"); showToast("Copied!", "success"); }} className="text-slate-400 hover:text-[var(--theme-primary)] transition-colors" title="Copy"><Copy size={12} /></button>
                                                                         </div>
                                                                     </div>
                                                                 </div>

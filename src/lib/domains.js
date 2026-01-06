@@ -49,10 +49,8 @@ export function isCustomDomain() {
     const hostname = window.location.hostname;
     const mainDomains = [
         'localhost',
-        'sayingthings.com',
-        'www.sayingthings.com',
-        'vo.built.at',
         'built.at',
+        'app.sayingthings.com',
     ];
 
     return !mainDomains.some(domain => hostname.includes(domain));
