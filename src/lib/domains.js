@@ -171,9 +171,13 @@ export async function removeCustomDomain(domainId) {
  */
 export async function getUserCustomDomains() {
     try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
         const { data, error } = await supabase
             .from('custom_domains')
             .select('*')
+            .eq('user_id', user.id)
             .order('created_at', { ascending: false });
 
         if (error) {
