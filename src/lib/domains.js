@@ -51,6 +51,8 @@ export function isCustomDomain() {
         'localhost',
         'sayingthings.com',
         'www.sayingthings.com',
+        'vo.built.at',
+        'built.at',
     ];
 
     return !mainDomains.some(domain => hostname.includes(domain));
