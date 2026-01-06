@@ -7,7 +7,7 @@ import {
     MessageSquare, Contact, Info, Settings, Share2, Type, GripVertical, Mail, Globe, CheckCircle, AlertCircle, Copy, Eye, EyeOff
 } from "lucide-react";
 import { motion, Reorder, AnimatePresence } from "framer-motion";
-import { getUserCustomDomains, addCustomDomain, removeCustomDomain, verifyDomainOwnership } from "../lib/domains";
+import { getUserCustomDomains, addCustomDomain, verifyDomainOwnership } from "../lib/domains";
 
 import { fonts, applyFont, loadAllFonts } from "../lib/fonts";
 
@@ -480,20 +480,7 @@ export default function Admin() {
         }
     };
 
-    const handleRemoveDomain = async (id) => {
-        if (!confirm("Are you sure? This will stop the custom domain from working.")) return;
-        try {
-            const result = await removeCustomDomain(id);
-            if (result.success) {
-                showToast("Domain removed", "success");
-                setCustomDomains(await getUserCustomDomains());
-            } else {
-                throw result.error;
-            }
-        } catch (error) {
-            showToast("Error removing domain", "error");
-        }
-    };
+
 
     const handleCheckVerification = async (domain, token) => {
         setUploading(true);
@@ -836,7 +823,7 @@ export default function Admin() {
                                                             </button>
                                                         )}
                                                         <button
-                                                            onClick={() => handleRemoveDomain(domain.id)}
+                                                            onClick={() => deleteItem('custom_domains', domain.id)}
                                                             className="text-slate-400 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors"
                                                         >
                                                             <Trash2 size={16} />
