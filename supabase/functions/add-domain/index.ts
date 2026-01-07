@@ -38,32 +38,24 @@ serve(async (req: Request) => {
         }
 
         // 2. Call Cloudflare API to add Custom Hostname
-        // You need to set CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID in your Supabase Dashboard
         const cfToken = Deno.env.get('CLOUDFLARE_API_TOKEN')
         const cfZoneId = Deno.env.get('CLOUDFLARE_ZONE_ID')
 
-        // Check if tokens are missing OR are just the placeholder text from the tutorial
         const isMisconfigured = !cfToken || !cfZoneId ||
             cfToken === 'your_real_token' || cfZoneId === 'your_real_zone_id' ||
             cfToken === 'your_token_here' || cfZoneId === 'your_zone_id_here';
 
         if (isMisconfigured) {
-            console.warn("Missing or placeholder Cloudflare config - Falling back to MOCK MODE")
-            // return new Response("Server configuration error", { status: 500, headers: corsHeaders })
-
-            // Fallback for demo purposes if no CF keys are set:
-            // We will just return a mock response so the UI works, 
-            // but in production this should error out.
-
             const mockToken = `built-verify-${Math.random().toString(36).substring(7)}`;
-
-            // Insert into DB (mock path)
             const { error: dbError } = await supabaseClient
                 .from('custom_domains')
                 .insert({
                     user_id: user.id,
                     domain: domain,
                     verification_token: mockToken,
+                    ownership_type: 'txt',
+                    ownership_name: `_built-verify.${domain}`,
+                    ownership_value: mockToken,
                     verified: false
                 })
 
@@ -72,7 +64,7 @@ serve(async (req: Request) => {
             return new Response(JSON.stringify({
                 success: true,
                 verification_token: mockToken,
-                message: "Domain added (Mock Mode - Configure Cloudflare Keys to Enable Real Provisioning)"
+                message: "Mock Mode"
             }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 200,
@@ -91,7 +83,7 @@ serve(async (req: Request) => {
                 body: JSON.stringify({
                     hostname: domain,
                     ssl: {
-                        method: 'txt', // TXT validation for SSL
+                        method: 'txt',
                         type: 'dv',
                     },
                 }),
@@ -109,14 +101,17 @@ serve(async (req: Request) => {
         }
 
         const hostnameResult = cfData.result
-        // Extract verification token (ownership verification)
-        // usually in hostnameResult.ownership_verification.value
-        // or ssl verification in hostnameResult.ssl.validation_records
 
-        // For simplicity, we'll grab the ownership token if available, or just a placeholder
-        const verificationToken = hostnameResult.ownership_verification?.value ||
-            hostnameResult.ssl?.validation_records?.[0]?.value ||
-            "pending_verification";
+        // Ownership verification
+        const ownership = hostnameResult.ownership_verification || {};
+        const ownershipType = ownership.type || 'txt';
+        const ownershipName = ownership.name || `_cf-custom-hostname.${domain}`;
+        const ownershipValue = ownership.value || '';
+
+        // SSL verification
+        const sslRecords = hostnameResult.ssl?.validation_records || [];
+        const sslName = sslRecords[0]?.txt_name || '';
+        const sslValue = sslRecords[0]?.txt_value || '';
 
         // 3. Insert into Supabase
         const { error: dbError } = await supabaseClient
@@ -124,14 +119,17 @@ serve(async (req: Request) => {
             .insert({
                 user_id: user.id,
                 domain: domain,
-                verification_token: verificationToken,
-                verified: false,
-                // We could store the Cloudflare ID too if we added a column for it
-                // cf_hostname_id: hostnameResult.id 
+                verification_token: ownershipValue,
+                ownership_type: ownershipType,
+                ownership_name: ownershipName,
+                ownership_value: ownershipValue,
+                ssl_name: sslName,
+                ssl_value: sslValue,
+                verified: false
             })
 
         if (dbError) {
-            if (dbError.code === '23505') { // Unique violation
+            if (dbError.code === '23505') {
                 return new Response(JSON.stringify({ error: "Domain already registered" }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
             }
             throw dbError
@@ -139,8 +137,7 @@ serve(async (req: Request) => {
 
         return new Response(JSON.stringify({
             success: true,
-            data: hostnameResult,
-            verification_token: verificationToken
+            data: hostnameResult
         }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,

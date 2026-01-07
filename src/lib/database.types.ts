@@ -16,6 +16,11 @@ export interface Database {
                     domain: string
                     verified: boolean
                     verification_token: string | null
+                    ownership_type: string | null
+                    ownership_name: string | null
+                    ownership_value: string | null
+                    ssl_name: string | null
+                    ssl_value: string | null
                     created_at: string
                     updated_at: string
                 }
@@ -25,6 +30,11 @@ export interface Database {
                     domain: string
                     verified?: boolean
                     verification_token?: string | null
+                    ownership_type?: string | null
+                    ownership_name?: string | null
+                    ownership_value?: string | null
+                    ssl_name?: string | null
+                    ssl_value?: string | null
                     created_at?: string
                     updated_at?: string
                 }
@@ -34,6 +44,11 @@ export interface Database {
                     domain?: string
                     verified?: boolean
                     verification_token?: string | null
+                    ownership_type?: string | null
+                    ownership_name?: string | null
+                    ownership_value?: string | null
+                    ssl_name?: string | null
+                    ssl_value?: string | null
                     created_at?: string
                     updated_at?: string
                 }

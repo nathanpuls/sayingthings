@@ -557,19 +557,12 @@ export default function Admin() {
 
 
 
-    const handleCheckVerification = async (domain: string, token: string) => {
+    const handleCheckVerification = async (domain: string, token: string, customName?: string) => {
         setUploading(true);
         try {
-            const verified = await verifyDomainOwnership(domain, token);
+            const verified = await verifyDomainOwnership(domain, token, customName);
             if (verified) {
-                // Update local state to reflect verification (in a real app, backend would update DB)
-                // For now, let's just re-fetch and hope the backend/function updated it
-                // Since we don't have a backend function yet, verifyDomainOwnership returns false usually
-                // But let's assume if it returned true, we are good.
-
-                // Manually update DB for now since we are client-side admin
                 await (supabase.from('custom_domains' as any) as any).update({ verified: true }).eq('domain', domain);
-
                 showToast("Domain verified successfully!", "success");
                 setCustomDomains(await getUserCustomDomains());
             } else {
@@ -890,7 +883,7 @@ export default function Admin() {
                                                     <div className="flex items-center gap-2">
                                                         {!domain.verified && (
                                                             <button
-                                                                onClick={() => handleCheckVerification(domain.domain, domain.verification_token)}
+                                                                onClick={() => handleCheckVerification(domain.domain, domain.ownership_value || domain.verification_token, domain.ownership_name)}
                                                                 className="text-xs font-bold text-[var(--theme-primary)] hover:underline px-3 py-2"
                                                             >
                                                                 Check Verification
@@ -911,11 +904,12 @@ export default function Admin() {
                                                             To verify ownership, add these records to your DNS provider (e.g. <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" className="text-[var(--theme-primary)] hover:underline font-medium">Cloudflare</a>, GoDaddy).
                                                         </div>
 
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                                            {/* CNAME RECORD */}
                                                             <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                                                                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between items-center">
                                                                     <span>CNAME Record</span>
-                                                                    <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-medium normal-case">Proxy Off / DNS Only</span>
+                                                                    <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-medium normal-case">DNS Only</span>
                                                                 </div>
                                                                 <div className="space-y-2">
                                                                     <div className="flex items-center justify-between text-sm">
@@ -934,25 +928,50 @@ export default function Admin() {
                                                                     </div>
                                                                 </div>
                                                             </div>
+
+                                                            {/* OWNERSHIP TXT RECORD */}
                                                             <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">TXT Record</div>
+                                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Ownership TXT</div>
                                                                 <div className="space-y-2">
                                                                     <div className="flex items-center justify-between text-sm">
-                                                                        <span className="text-slate-500">Name:</span>
-                                                                        <div className="flex items-center gap-2 bg-white px-2 py-1 rounded border border-slate-100">
-                                                                            <span className="font-mono text-slate-800">_built-verify</span>
-                                                                            <button onClick={() => { navigator.clipboard.writeText("_built-verify"); showToast("Copied!", "success"); }} className="text-slate-400 hover:text-[var(--theme-primary)] transition-colors" title="Copy"><Copy size={12} /></button>
+                                                                        <span className="text-slate-500 shrink-0">Name:</span>
+                                                                        <div className="flex items-center gap-2 bg-white px-2 py-1 rounded border border-slate-100 overflow-hidden">
+                                                                            <span className="font-mono text-slate-800 text-xs truncate">{domain.ownership_name || `_cf-custom-hostname`}</span>
+                                                                            <button onClick={() => { navigator.clipboard.writeText(domain.ownership_name || `_cf-custom-hostname`); showToast("Copied!", "success"); }} className="text-slate-400 hover:text-[var(--theme-primary)] transition-colors" title="Copy"><Copy size={12} /></button>
                                                                         </div>
                                                                     </div>
                                                                     <div className="flex flex-col gap-1 text-sm">
                                                                         <span className="text-slate-500">Value:</span>
-                                                                        <div className="flex items-start justify-between gap-2 bg-white px-2 py-1 rounded border border-slate-100 w-full">
-                                                                            <span className="font-mono text-slate-800 break-all text-xs">{domain.verification_token}</span>
-                                                                            <button onClick={() => { navigator.clipboard.writeText(domain.verification_token); showToast("Copied!", "success"); }} className="text-slate-400 hover:text-[var(--theme-primary)] transition-colors shrink-0 mt-0.5" title="Copy"><Copy size={12} /></button>
+                                                                        <div className="flex items-start justify-between gap-2 bg-white px-2 py-1 rounded border border-slate-100 w-full overflow-hidden">
+                                                                            <span className="font-mono text-slate-800 break-all text-[10px] sm:text-xs">{(domain.ownership_value || domain.verification_token)?.substring(0, 30)}...</span>
+                                                                            <button onClick={() => { navigator.clipboard.writeText(domain.ownership_value || domain.verification_token); showToast("Copied!", "success"); }} className="text-slate-400 hover:text-[var(--theme-primary)] transition-colors shrink-0 mt-0.5" title="Copy"><Copy size={12} /></button>
                                                                         </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
+
+                                                            {/* SSL TXT RECORD */}
+                                                            {domain.ssl_name && (
+                                                                <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                                                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">SSL Validation TXT</div>
+                                                                    <div className="space-y-2">
+                                                                        <div className="flex items-center justify-between text-sm">
+                                                                            <span className="text-slate-500 shrink-0">Name:</span>
+                                                                            <div className="flex items-center gap-2 bg-white px-2 py-1 rounded border border-slate-100 overflow-hidden">
+                                                                                <span className="font-mono text-slate-800 text-xs truncate">{domain.ssl_name}</span>
+                                                                                <button onClick={() => { navigator.clipboard.writeText(domain.ssl_name); showToast("Copied!", "success"); }} className="text-slate-400 hover:text-[var(--theme-primary)] transition-colors" title="Copy"><Copy size={12} /></button>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex flex-col gap-1 text-sm">
+                                                                            <span className="text-slate-500">Value:</span>
+                                                                            <div className="flex items-start justify-between gap-2 bg-white px-2 py-1 rounded border border-slate-100 w-full overflow-hidden">
+                                                                                <span className="font-mono text-slate-800 break-all text-[10px] sm:text-xs">{domain.ssl_value?.substring(0, 30)}...</span>
+                                                                                <button onClick={() => { navigator.clipboard.writeText(domain.ssl_value); showToast("Copied!", "success"); }} className="text-slate-400 hover:text-[var(--theme-primary)] transition-colors shrink-0 mt-0.5" title="Copy"><Copy size={12} /></button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                         <p className="text-xs text-slate-400 italic">
                                                             Note: DNS changes can take up to 48 hours to propagate, though it's usually much faster.

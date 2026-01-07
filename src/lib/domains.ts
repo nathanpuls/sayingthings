@@ -51,11 +51,18 @@ export function generateVerificationToken(): string {
     return `builtat-verify-${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
 }
 
-export async function verifyDomainOwnership(domain: string, token: string): Promise<boolean> {
+export async function verifyDomainOwnership(domain: string, token: string, customName?: string): Promise<boolean> {
     try {
         // Check using Cloudflare DNS over HTTPS (works in browser!)
         const checkDns = async (provider: string) => {
-            const hostname = `_built-verify.${domain}`;
+            let hostname = customName || `_built-verify.${domain}`;
+
+            // If the hostname doesn't contain the domain, append it
+            // This handles cases where backend might store just the subdomain part
+            if (hostname && !hostname.includes(domain)) {
+                hostname = `${hostname}.${domain}`;
+            }
+
             const url = `${provider}?name=${hostname}&type=TXT`;
 
             const res = await fetch(url, {
