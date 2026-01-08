@@ -62,7 +62,6 @@ export interface Database {
                     order: number
                     created_at: string
                     segments: Json | null
-                    category: string | null
                 }
                 Insert: {
                     id?: string

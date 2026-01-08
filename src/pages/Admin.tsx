@@ -134,7 +134,7 @@ export default function Admin() {
     const [editForm, setEditForm] = useState<any>({});
 
     // Create Form States
-    const [newDemo, setNewDemo] = useState({ name: "", url: "", category: "" });
+    const [newDemo, setNewDemo] = useState({ name: "", url: "" });
     const [newVideo, setNewVideo] = useState({ youtubeId: "", title: "" });
     const [newStudio, setNewStudio] = useState({ name: "", url: "" });
     const [newClient, setNewClient] = useState({ url: "" });
@@ -416,7 +416,6 @@ export default function Admin() {
             } else {
                 dbPayload.name = finalData.name; // demos, studio
                 dbPayload.url = finalData.url;   // demos, studio, clients (clients has no name)
-                if (collName === 'demos') dbPayload.category = finalData.category;
             }
             tableName = collName === 'videos' ? 'videos' :
                 collName === 'studio' ? 'studio_gear' :
@@ -499,7 +498,6 @@ export default function Admin() {
             } else {
                 if (raw.name !== undefined) dbPayload.name = raw.name;
                 if (raw.url !== undefined) dbPayload.url = raw.url;
-                if (collName === 'demos' && raw.category !== undefined) dbPayload.category = raw.category;
             }
 
             const { error } = await (supabase.from(tableName as any) as any).update(dbPayload).eq('id', id);
@@ -698,16 +696,15 @@ export default function Admin() {
                     {/* Demos Tab */}
                     {activeTab === "demos" && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <form onSubmit={(e) => { e.preventDefault(); addItem("demos", newDemo, () => setNewDemo({ name: "", url: "", category: "" })); }} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
-                                <FormInput label="Category" placeholder="e.g. Commercial" value={newDemo.category || ""} onChange={v => setNewDemo({ ...newDemo, category: v })} />
-                                <FormInput label="Track Name" placeholder="e.g. Spot 1" value={newDemo.name} onChange={v => setNewDemo({ ...newDemo, name: v })} />
+                            <form onSubmit={(e) => { e.preventDefault(); addItem("demos", newDemo, () => setNewDemo({ name: "", url: "" })); }} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                                <FormInput label="Demo Name" placeholder="e.g. Commercial" value={newDemo.name} onChange={v => setNewDemo({ ...newDemo, name: v })} />
                                 <div className="flex gap-2 items-end">
                                     <FormInput label="Audio URL" placeholder="https://..." value={newDemo.url} onChange={v => setNewDemo({ ...newDemo, url: v })} containerClass="flex-1" />
                                     <FileUploader folder="demos" accept="audio/*" onUploadComplete={(url) => setNewDemo(prev => ({ ...prev, url }))} />
                                 </div>
-                                <button type="submit" disabled={uploading || !newDemo.name || !newDemo.url} className="text-white py-3 px-6 rounded-xl font-semibold transition-all disabled:opacity-50 bg-[var(--theme-primary)] hover:opacity-90 shadow-lg shadow-[var(--theme-primary)]/30">Add Track</button>
+                                <button type="submit" disabled={uploading || !newDemo.name || !newDemo.url} className="text-white py-3 px-6 rounded-xl font-semibold transition-all disabled:opacity-50 bg-[var(--theme-primary)] hover:opacity-90 shadow-lg shadow-[var(--theme-primary)]/30">Add Demo</button>
                             </form>
-                            <ItemList items={demos} collName="demos" onReorder={(newItems) => handleReorder("demos", newItems)} onDelete={deleteItem} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} onSave={updateItem} onCancel={() => setEditingId(null)} fields={[{ key: 'category', label: 'Category' }, { key: 'name', label: 'Track Name' }, { key: 'url', label: 'Audio URL' }]}
+                            <ItemList items={demos} collName="demos" onReorder={(newItems) => handleReorder("demos", newItems)} onDelete={deleteItem} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} onSave={updateItem} onCancel={() => setEditingId(null)} fields={[{ key: 'name', label: 'Name' }, { key: 'url', label: 'Audio URL' }]}
                                 extraActions={(item) => (
                                     <button
                                         onClick={() => setClipModal({ isOpen: true, demo: item })}
@@ -1163,15 +1160,24 @@ export default function Admin() {
                                     <Section title="Theme & Appearance" icon={<Settings size={18} />}>
                                         <div className="space-y-3">
                                             <div className="flex items-center gap-4">
-                                                <input
-                                                    type="color"
-                                                    value={siteContent.themeColor || "#4f46e5"}
-                                                    onChange={e => setSiteContent({ ...siteContent, themeColor: e.target.value })}
-                                                    className="h-12 w-24 p-1 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer"
-                                                />
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="color"
+                                                        value={siteContent.themeColor || "#4f46e5"}
+                                                        onChange={e => setSiteContent({ ...siteContent, themeColor: e.target.value })}
+                                                        className="h-12 w-12 p-1 bg-white border border-slate-200 rounded-lg cursor-pointer"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        value={siteContent.themeColor || "#4f46e5"}
+                                                        onChange={e => setSiteContent({ ...siteContent, themeColor: e.target.value })}
+                                                        placeholder="#000000"
+                                                        className="h-12 w-28 px-3 bg-white border border-slate-200 rounded-lg text-sm font-mono text-slate-700 outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/20 focus:border-[var(--theme-primary)]"
+                                                    />
+                                                </div>
                                                 <div>
                                                     <label className="block text-[11px] font-medium text-slate-400 mb-1 uppercase tracking-tight">Primary Brand Color</label>
-                                                    <p className="text-sm text-slate-500">Pick a color for buttons and highlights.</p>
+                                                    <p className="text-sm text-slate-500">Pick a color or enter hex code.</p>
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
