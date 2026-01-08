@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Play, Pause, ChevronDown, Copy, Code, X, Check } from 'lucide-react';
+import { Play, Pause, ChevronDown, Copy, X, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Clip {
@@ -61,8 +61,6 @@ export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: Voi
             window.history.replaceState({}, '', newUrl);
         }
     }, [selectedTrack]);
-
-    const currentClip = currentClipIndex !== null && selectedTrack ? selectedTrack.clips[currentClipIndex] : null;
 
     // Load track when selected and auto-play
     useEffect(() => {

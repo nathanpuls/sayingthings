@@ -11,12 +11,6 @@ interface Segment {
     end: number;
 }
 
-interface Demo {
-    id: string;
-    name: string;
-    url: string;
-    segments: Segment[] | null;
-}
 
 interface SiteSettings {
     theme_color: string;
