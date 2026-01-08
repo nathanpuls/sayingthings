@@ -1,0 +1,1 @@
+So coolALTER TABLE demos ADD COLUMN IF NOT EXISTS category TEXT;
