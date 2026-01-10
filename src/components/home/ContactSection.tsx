@@ -118,7 +118,7 @@ export default function ContactSection({ siteContent, uid, basePadding = "py-6 m
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</span>
-                                <span className="font-semibold text-slate-800 text-lg break-all">{siteContent.contactEmail}</span>
+                                <span className="font-semibold text-slate-800 text-base md:text-lg break-all">{siteContent.contactEmail}</span>
                             </div>
                         </a>
 
@@ -132,7 +132,7 @@ export default function ContactSection({ siteContent, uid, basePadding = "py-6 m
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Phone</span>
-                                    <span className="font-semibold text-slate-800 text-lg">{siteContent.contactPhone}</span>
+                                    <span className="font-semibold text-slate-800 text-base md:text-lg">{siteContent.contactPhone}</span>
                                 </div>
                             </a>
                         )}
