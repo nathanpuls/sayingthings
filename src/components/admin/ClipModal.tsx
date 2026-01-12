@@ -26,16 +26,9 @@ export default function ClipModal({ isOpen, demo, onClose, showToast, waveformCa
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const waveformRef = useRef<HTMLDivElement>(null);
     const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
-    const [bulkLabels, setBulkLabels] = useState("");
-    const [showBulk, setShowBulk] = useState(false);
     const [editingIdx, setEditingIdx] = useState<number | null>(null);
 
-    // Sync bulk labels when opening the panel
-    useEffect(() => {
-        if (showBulk && clips) {
-            setBulkLabels(clips.map(s => s.label).join('\n'));
-        }
-    }, [showBulk]);
+
 
     useEffect(() => {
         if (demo && isOpen) {

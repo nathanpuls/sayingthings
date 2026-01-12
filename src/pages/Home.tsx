@@ -401,7 +401,7 @@ export default function Home() {
                   isPlayingVideo={isPlayingVideo}
                   handleVideoToggle={handleVideoToggle}
                   basePadding={basePadding}
-                  videoRef={videoRef}
+                  videoRef={videoRef as React.RefObject<HTMLIFrameElement>}
                 />
               );
             case 'studio':

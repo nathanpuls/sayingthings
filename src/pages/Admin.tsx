@@ -1,12 +1,13 @@
-import { useState, useEffect, useRef, useCallback, ReactNode, ChangeEvent } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { Link } from "react-router-dom";
 import {
-    Trash2, Edit2, Save, X, LogOut, LogIn, UploadCloud,
-    Home, Music, Video, Mic, Users, Scissors, Play, Pause, FastForward, Rewind,
-    MessageSquare, Contact, Info, Settings, Share2, GripVertical, Mail, Globe, CheckCircle, AlertCircle, Copy, Eye, EyeOff, RefreshCw, Check
+    Trash2, Save, LogOut, LogIn,
+    Home, Music, Video, Mic, Users, Scissors,
+    MessageSquare, Settings, Mail, Globe,
+    Copy, Info, Contact, Share2, GripVertical, Eye, EyeOff, AlertCircle, CheckCircle, RefreshCw
 } from "lucide-react";
-import { motion, Reorder, AnimatePresence } from "framer-motion";
+import { Reorder } from "framer-motion";
 import { getUserCustomDomains, addCustomDomain, verifyDomainOwnership } from "../lib/domains";
 import { fonts, applyFont, loadAllFonts } from "../lib/fonts";
 import { Database } from "../lib/database.types";
