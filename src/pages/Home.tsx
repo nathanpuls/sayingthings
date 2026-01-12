@@ -1,488 +1,94 @@
-import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
-import { supabase } from "../lib/supabase";
-import { getUserIdFromDomain } from "../lib/domains";
-import { resolveUser } from "../lib/users";
-import { applyFont } from "../lib/fonts";
-import { getPlayableUrl } from "../lib/audio";
-import { Database } from "../lib/database.types";
 
-import Landing from "../components/home/Landing";
-import HomeNav from "../components/home/HomeNav";
-import DemosSection from "../components/home/DemosSection";
-import ProjectsSection from "../components/home/ProjectsSection";
-import StudioSection from "../components/home/StudioSection";
-import ClientsSection from "../components/home/ClientsSection";
-import ReviewsSection from "../components/home/ReviewsSection";
-import AboutSection from "../components/home/AboutSection";
-import ContactSection from "../components/home/ContactSection";
-import MiniPlayer from "../components/home/MiniPlayer";
 
-// Types
-type Demo = Database['public']['Tables']['demos']['Row'];
-type VideoItem = Database['public']['Tables']['videos']['Row'];
-type StudioGear = Database['public']['Tables']['studio_gear']['Row'];
-type Client = Database['public']['Tables']['clients']['Row'];
-type Review = Database['public']['Tables']['reviews']['Row'];
-type SiteSettings = Database['public']['Tables']['site_settings']['Row'];
-
-interface SiteContent {
-  heroTitle: string;
-  heroSubtitle: string;
-  aboutTitle: string;
-  aboutText: string;
-  contactEmail: string;
-  contactPhone: string;
-  siteName: string;
-  profileImage: string;
-  profileCartoon: string;
-  showCartoon: boolean;
-  clientsGrayscale: boolean;
-  themeColor: string;
-  sectionOrder: string[];
-  hiddenSections: string[];
-  font: string;
-  web3FormsKey: string;
-  showContactForm: boolean;
-  favicon: string;
-}
+import { motion } from 'framer-motion';
+import { Search, ArrowRight, Star } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Home() {
-  const { uid } = useParams();
-  const [loading, setLoading] = useState<boolean>(true);
-  const [showLanding, setShowLanding] = useState<boolean>(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  // Scroll State
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [showMiniPlayer, setShowMiniPlayer] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    return (
+        <>
+            {/* Hero Section */}
+            <section className="pt-20 pb-20 px-4">
+                <div className="max-w-7xl mx-auto text-center">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        <span className="inline-block py-1 px-3 rounded-full bg-indigo-50 text-primary text-sm font-medium mb-6">
+                            The Marketplace for Builders
+                        </span>
+                        <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight text-slate-900">
+                            Where creators <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">
+                                showcase their craft
+                            </span>
+                        </h1>
+                        <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+                            Discover exceptional talent, browse unique portfolios, and connect with the builders shaping the future of digital experiences.
+                        </p>
 
+                        {/* Search Bar - Navigate to explore on click/focus for now or keep functional */}
+                        <div className="max-w-2xl mx-auto relative mb-12 group">
+                            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                <Search className="h-5 w-5 text-slate-400" />
+                            </div>
+                            <input
+                                type="text"
+                                className="block w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-lg transition-all"
+                                placeholder="Search for designers, developers, and creators..."
+                            />
+                        </div>
 
-  // Audio State
-  const [demos, setDemos] = useState<Demo[]>([]);
-  const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(0);
-  const audioRef = useRef<HTMLAudioElement>(null);
+                        <div className="flex justify-center gap-8 text-sm text-slate-500 font-medium">
+                            <span className="flex items-center gap-2">
+                                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                                Top-rated talent
+                            </span>
+                            <span className="flex items-center gap-2">
+                                <div className="w-4 h-4 rounded-full bg-green-500/20 flex items-center justify-center">
+                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                </div>
+                                Verified profiles
+                            </span>
+                        </div>
+                    </motion.div>
+                </div>
+            </section>
 
-  // Audio Handlers
-  const currentAudioTrack = demos[currentAudioIndex];
+            {/* Featured Grid */}
+            <section className="py-20 bg-white/50">
+                <div className="max-w-7xl mx-auto px-4">
+                    <div className="flex justify-between items-end mb-12">
+                        <h2 className="text-3xl font-bold text-slate-900">Featured Builders</h2>
+                        <Link to="/explore" className="text-primary font-medium hover:text-indigo-700 flex items-center gap-1">
+                            View All <ArrowRight className="w-4 h-4" />
+                        </Link>
+                    </div>
 
-  useEffect(() => {
-    if (audioRef.current) {
-      if (isAudioPlaying) {
-        audioRef.current.play().catch(e => {
-          console.error("Play error:", e);
-          setIsAudioPlaying(false);
-        });
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [isAudioPlaying, currentAudioIndex]);
-
-  const toggleAudioPlay = () => setIsAudioPlaying(!isAudioPlaying);
-
-  const handleAudioTimeUpdate = () => {
-    if (audioRef.current) setAudioCurrentTime(audioRef.current.currentTime);
-  };
-
-  const handleAudioLoadedMetadata = () => {
-    if (audioRef.current) {
-      setAudioDuration(audioRef.current.duration);
-      if (isAudioPlaying) audioRef.current.play().catch(() => setIsAudioPlaying(false));
-    }
-  };
-
-  const handleAudioEnded = () => {
-    setCurrentAudioIndex(prev => (prev + 1) % demos.length);
-  };
-
-  const handleAudioSeek = (time: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
-      setAudioCurrentTime(time);
-      if (!isAudioPlaying) {
-        setIsAudioPlaying(true);
-        audioRef.current.play().catch(console.error);
-      }
-    }
-  };
-
-  const nextTrack = () => setCurrentAudioIndex(prev => (prev + 1) % demos.length);
-  const prevTrack = () => setCurrentAudioIndex(prev => (prev - 1 + demos.length) % demos.length);
-
-  // Firestore Data States
-  const [studioGear, setStudioGear] = useState<StudioGear[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [videos, setVideos] = useState<VideoItem[]>([]);
-  const [activeVideo, setActiveVideo] = useState<VideoItem | null>(null);
-  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
-  const videoRef = useRef<HTMLIFrameElement>(null);
-
-  // Set initial active video when videos load
-  useEffect(() => {
-    if (videos.length > 0 && !activeVideo) {
-      setActiveVideo(videos[0]);
-      setIsPlayingVideo(false);
-    }
-  }, [videos]);
-
-  const handleVideoToggle = (vid: VideoItem) => {
-    // Stop audio when playing video
-    setIsAudioPlaying(false);
-
-    if (activeVideo?.id === vid.id) {
-      // Toggle current video
-      const action = isPlayingVideo ? 'pauseVideo' : 'playVideo';
-      if (videoRef.current) {
-        videoRef.current.contentWindow?.postMessage(JSON.stringify({
-          event: 'command',
-          func: action,
-          args: []
-        }), '*');
-        setIsPlayingVideo(!isPlayingVideo);
-      }
-    } else {
-      // Switch to new video - don't autoplay, let user click play
-      setActiveVideo(vid);
-      setIsPlayingVideo(false);
-    }
-  };
-
-  const [siteContent, setSiteContent] = useState<SiteContent>({
-    heroTitle: "",
-    heroSubtitle: "",
-    aboutTitle: "",
-    aboutText: "",
-    contactEmail: "",
-    contactPhone: "",
-    siteName: "",
-    profileImage: "",
-    profileCartoon: "",
-    showCartoon: true,
-    clientsGrayscale: false,
-    themeColor: "#6366f1",
-    sectionOrder: ["demos", "projects", "studio", "clients", "reviews", "about", "contact"],
-    hiddenSections: [],
-    font: "Outfit",
-    web3FormsKey: "",
-    showContactForm: true,
-    favicon: ""
-  });
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-      setShowMiniPlayer(window.scrollY > 500); // Only show after scrolling past demos
-    };
-    window.addEventListener("scroll", handleScroll);
-
-    const fetchData = async () => {
-      // Also check if current viewer is logged in
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
-
-      // Check if we're on a custom domain first
-      let userId: string | null | undefined = null;
-
-      if (uid) {
-        // Resolve UID or Username
-        userId = await resolveUser(uid);
-      } else {
-        // Try to get user ID from custom domain
-        userId = await getUserIdFromDomain();
-      }
-
-      // If still no user ID, show the landing page for 'Built'
-      if (!userId) {
-        setShowLanding(true);
-        setLoading(false);
-        return;
-      }
-
-      const fetchTable = async <T extends keyof Database['public']['Tables']>(table: T) => {
-        const { data, error } = await supabase.from(table).select('*').eq('user_id' as any, userId! as any).order('order', { ascending: true });
-        if (error) console.error(`Error fetching ${table}:`, error);
-        return data || [];
-      };
-
-      // Fetch settings first (critical for initial render/background/colors)
-      const { data: settingsData } = await supabase.from('site_settings').select('*').eq('user_id', userId).single();
-      const settings = settingsData as SiteSettings | null;
-      if (settings) {
-        setSiteContent({
-          heroTitle: settings.hero_title || "",
-          heroSubtitle: settings.hero_subtitle || "",
-          aboutTitle: settings.about_title || "",
-          aboutText: settings.about_text || "",
-          contactEmail: settings.contact_email || "",
-          contactPhone: settings.contact_phone || "",
-          siteName: settings.site_name || "",
-          profileImage: settings.profile_image || "",
-          profileCartoon: settings.profile_cartoon || "",
-          showCartoon: settings.show_cartoon !== false,
-          clientsGrayscale: !!settings.clients_grayscale,
-          themeColor: settings.theme_color || "#6366f1",
-          sectionOrder: (settings.section_order as any) || ["demos", "projects", "studio", "clients", "reviews", "about", "contact"],
-          hiddenSections: (settings.hidden_sections as any) || [],
-          font: settings.font || "Outfit",
-          web3FormsKey: settings.web3_forms_key || "",
-          showContactForm: settings.show_contact_form !== false,
-          favicon: settings.favicon || ""
-        });
-        if (settings.font) applyFont(settings.font);
-      }
-
-      // Hide loader as soon as settings are in (so user sees the site structure)
-      setLoading(false);
-
-      // Fetch non-critical content in parallel
-      Promise.all([
-        fetchTable('demos'),
-        fetchTable('studio_gear'),
-        fetchTable('clients'),
-        fetchTable('reviews'),
-        fetchTable('videos')
-      ]).then(([demosData, studioData, clientsData, reviewsData, videosData]) => {
-        setDemos(demosData);
-        setStudioGear(studioData);
-        setClients(clientsData);
-        setReviews(reviewsData);
-        setVideos(videosData);
-      });
-    };
-
-    fetchData();
-
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [uid]);
-
-  // Handle Hash Scrolling
-  useEffect(() => {
-    if (!loading) {
-      const handleHashScroll = () => {
-        const hash = window.location.hash;
-        if (hash) {
-          const id = hash.replace('#', '');
-          const element = document.getElementById(id);
-          if (element) {
-            setTimeout(() => {
-              element.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
-          }
-        }
-      };
-
-      // Handle initial load hash
-      handleHashScroll();
-
-      // Listen for hash changes
-      window.addEventListener('hashchange', handleHashScroll);
-      return () => window.removeEventListener('hashchange', handleHashScroll);
-    }
-  }, [loading]);
-
-  // Update document title
-  useEffect(() => {
-    if (showLanding) {
-      document.title = "Built.at";
-    } else if (siteContent.siteName) {
-      document.title = siteContent.siteName;
-    }
-  }, [showLanding, siteContent.siteName]);
-
-  // Update favicon
-  useEffect(() => {
-    if (!showLanding && siteContent.favicon) {
-      const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
-      if (link) {
-        link.href = siteContent.favicon;
-      } else {
-        const newLink = document.createElement('link');
-        newLink.rel = 'icon';
-        newLink.href = siteContent.favicon;
-        document.head.appendChild(newLink);
-      }
-    }
-  }, [showLanding, siteContent.favicon]);
-
-  const navLinkDetails = {
-    demos: "Demos",
-    projects: "Projects",
-    studio: "Studio",
-    clients: "Clients",
-    reviews: "Reviews",
-    about: "About",
-    contact: "Contact"
-  };
-
-  const navLinks = siteContent.sectionOrder
-    .filter(id => !(siteContent.hiddenSections || []).includes(id))
-    .map(id => ({
-      name: navLinkDetails[id as keyof typeof navLinkDetails] || id.charAt(0).toUpperCase() + id.slice(1),
-      href: `#${id}`
-    }));
-
-  const handleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin + '/admin'
-      }
-    });
-    if (error) console.error("Login failed:", error.message);
-  };
-
-  if (loading) return <div className="min-h-screen grid place-items-center bg-white"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" /></div>;
-
-  if (showLanding) {
-    return <Landing handleLogin={handleLogin} currentUser={currentUser} isScrolled={isScrolled} />
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      <audio
-        ref={audioRef}
-        src={currentAudioTrack ? getPlayableUrl(currentAudioTrack.url) : undefined}
-        onTimeUpdate={handleAudioTimeUpdate}
-        onLoadedMetadata={handleAudioLoadedMetadata}
-        onEnded={handleAudioEnded}
-      />
-      <style>{`
-        :root {
-          --theme-primary: ${siteContent.themeColor || '#6366f1'};
-        }
-      `}</style>
-
-      <HomeNav
-        isScrolled={isScrolled}
-        siteName={siteContent.siteName}
-        navLinks={navLinks}
-        mobileMenuOpen={mobileMenuOpen}
-        setMobileMenuOpen={setMobileMenuOpen}
-      />
-
-      {siteContent.sectionOrder
-        .filter(section => !(siteContent.hiddenSections || []).includes(section))
-        .map((section, index) => {
-          const isFirst = index === 0;
-          const basePadding = isFirst ? "pt-32 pb-6 md:pt-40 md:pb-10" : "py-6 md:py-10";
-
-          switch (section) {
-            case 'demos':
-              return (
-                <DemosSection
-                  key="demos"
-                  siteContent={siteContent}
-                  demos={demos}
-                  currentAudioIndex={currentAudioIndex}
-                  isAudioPlaying={isAudioPlaying}
-                  onPlayPause={toggleAudioPlay}
-                  onNext={nextTrack}
-                  onPrev={prevTrack}
-                  onSeek={handleAudioSeek}
-                  currentTime={audioCurrentTime}
-                  duration={audioDuration}
-                  onTrackSelect={(i) => {
-                    setCurrentAudioIndex(i);
-                    setIsAudioPlaying(true);
-                  }}
-                />
-              );
-            case 'projects':
-              return (
-                <ProjectsSection
-                  key="projects"
-                  activeVideo={activeVideo}
-                  videos={videos}
-                  isPlayingVideo={isPlayingVideo}
-                  handleVideoToggle={handleVideoToggle}
-                  basePadding={basePadding}
-                  videoRef={videoRef}
-                />
-              );
-            case 'studio':
-              return (
-                <StudioSection
-                  key="studio"
-                  studioGear={studioGear}
-                  basePadding={basePadding}
-                />
-              );
-            case 'clients':
-              return (
-                <ClientsSection
-                  key="clients"
-                  clients={clients}
-                  siteContent={siteContent}
-                  basePadding={basePadding}
-                />
-              );
-            case 'reviews':
-              return (
-                <ReviewsSection
-                  key="reviews"
-                  reviews={reviews}
-                  basePadding={basePadding}
-                />
-              );
-            case 'about':
-              return (
-                <AboutSection
-                  key="about"
-                  siteContent={siteContent}
-                  basePadding={basePadding}
-                />
-              );
-            case 'contact':
-              return (
-                <ContactSection
-                  key="contact"
-                  siteContent={siteContent}
-                  uid={uid}
-                  basePadding={basePadding}
-                />
-              );
-            default:
-              return null;
-          }
-        })}
-
-      <MiniPlayer
-        showMiniPlayer={showMiniPlayer}
-        currentAudioTrack={currentAudioTrack}
-        activeVideo={activeVideo}
-        isPlayingVideo={isPlayingVideo}
-        isAudioPlaying={isAudioPlaying}
-        onTogglePlay={() => {
-          if (isPlayingVideo && activeVideo) {
-            handleVideoToggle(activeVideo);
-          } else {
-            toggleAudioPlay();
-          }
-        }}
-        demos={demos}
-        videos={videos}
-        currentAudioIndex={currentAudioIndex}
-        onSelectAudio={(i) => {
-          setCurrentAudioIndex(i);
-          setIsAudioPlaying(true);
-          setIsPlayingVideo(false);
-        }}
-        onSelectVideo={(vid) => {
-          setActiveVideo(vid);
-          setIsPlayingVideo(false);
-          setIsAudioPlaying(false);
-          document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' });
-        }}
-      />
-
-      <footer className="pt-2 pb-32 text-center text-slate-400 text-sm bg-slate-50 relative flex justify-center items-center">
-        <p><a href="https://built.at" className="hover:text-[var(--theme-primary)] text-slate-500 transition-colors font-semibold">Built.at</a></p>
-      </footer>
-    </div>
-  );
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {[1, 2, 3].map((i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ delay: i * 0.1 }}
+                                className="bg-white rounded-2xl border border-slate-100 p-6 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all cursor-pointer group"
+                            >
+                                <div className="h-48 bg-slate-100 rounded-xl mb-6 overflow-hidden relative">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-violet-500/5 group-hover:scale-105 transition-transform duration-500" />
+                                </div>
+                                <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">Portfolio Title {i}</h3>
+                                <p className="text-slate-500 mb-4">A showcase of modern web development and design systems.</p>
+                                <div className="flex items-center text-primary font-medium text-sm">
+                                    View Profile <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+        </>
+    );
 }

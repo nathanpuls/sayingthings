@@ -3,18 +3,14 @@
 @tailwind utilities;
 
 :root {
+    --font-primary: 'Inter', sans-serif;
     --theme-primary: #6366f1;
-    --font-primary: 'Outfit', sans-serif;
 }
 
 body {
-    margin: 0;
     font-family: var(--font-primary);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
     background-color: #f8fafc;
-}
-
-* {
-    box-sizing: border-box;
+    /* Slate 50 */
+    color: #1e293b;
+    /* Slate 800 */
 }
